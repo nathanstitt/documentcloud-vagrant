@@ -23,17 +23,29 @@ require "./config/environment"
 require 'sqlite3'
 require 'cloud-crowd'
 
-organization = Organization.find_by_slug( 'test' )
-if organization.nil?
-    organization = Organization.create!({:name=>'Testing',:slug=>'test'})
-    puts "Created Testing organization, id: #{organization.id}"
-end
+Organization.transaction do
+  
 
-account = Account.find_by_email( options[:login] )
-if account.nil?
-  account=Account.create!({:organization=>organization,:first_name=>'Testing',:last_name=>'Account', :email=> options[:login], \
-                             :hashed_password=>BCrypt::Password.create( options[:password] ), :role=>Account::ADMINISTRATOR })
-  puts "Created Testing account.  Login: #{options[:login]}, pw: #{options[:password]}, id: #{account.id}"
+  organization = Organization.find_by_slug( 'documentcloud' )
+  if organization.nil?
+    organization = Organization.new({ :name=>'DocumentCloud',:slug=>'documentcloud' })
+    organization.id=1 # magic ID that marks it as the administrating organization
+    organization.save!
+    puts "Created Testing organization, id: #{organization.id}"
+  end
+
+  account = Account.find_by_email( options[:login] )
+  if account.nil?
+    account=Account.create!({ :first_name=>'Testing',:last_name=>'Account', :email=> options[:login], \
+                              :hashed_password=>BCrypt::Password.create( options[:password] ) })
+
+    organization.account_organizations.build({
+                                               :account=>account,
+                                               :role=> Account::ADMINISTRATOR  })
+
+    puts "Created Testing account.  Login: #{options[:login]}, pw: #{options[:password]}, id: #{account.id}"
+  end
+
 end
 
 # the cloud crowd test server will need this
